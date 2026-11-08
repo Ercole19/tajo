@@ -36,7 +36,7 @@ jobs:
       
       - name: Run Tests
         run: >
-          mvn -B -ntp -pl ${{ matrix.module }} test
+          mvn -B -ntp -pl ${{ matrix.module }} verify
           -Dtest='${{ matrix.tests }}' -DfailIfNoTests=false
 
     
