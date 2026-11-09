@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Licensed under the Apache License, Version 2.0 (the "License");
+<!--Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
 
@@ -29,6 +28,11 @@
   <properties>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Parametri sovrascrivibili da riga di comando con -D (vedi COMANDI.md) -->
+    <test.failure.ignore>true</test.failure.ignore>
+    <pit.targetClasses>org.apache.tajo.util.BytesUtils</pit.targetClasses>
+    <pit.targetTests>org.apache.tajo.util.BytesUtilsBBTest,org.apache.tajo.util.BytesUtilsWBTest,org.apache.tajo.util.BytesUtilsMTTest</pit.targetTests>
   </properties>
 
   <repositories>
@@ -42,13 +46,6 @@
   </repositories>
 
   <build>
-    <!--
-  Include all files in src/main/resources.  By default, do not apply property
-  substitution (filtering=false), but do apply property substitution to
-  tajo-version-info.properties (filtering=true).  This will substitute the
-  version information correctly, but prevent Maven from altering other files
-  like tajo-default.xml.
-  -->
     <resources>
       <resource>
         <directory>${basedir}/src/main/resources</directory>
@@ -65,10 +62,74 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+
     <plugins>
+      <!-- ======================================================= -->
+      <!-- 1. SUREFIRE PLUGIN (Esecuzione Test e Coverage)         -->
+      <!-- ======================================================= -->
       <plugin>
-      <groupId>org.apache.tajo</groupId>
-      <artifactId>tajo-maven-plugins</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.2</version>
+        <configuration>
+          <testFailureIgnore>${test.failure.ignore}</testFailureIgnore>
+          <!-- Se non specifichi -Dtest da terminale, di default esegue questi: -->
+          <includes>
+            <include>**/BytesUtilsBBTest.java</include>
+            <include>**/BytesUtilsWBTest.java</include>
+            <include>**/BytesUtilsMTTest.java</include>
+            <include>**/BytesUtilsLLM*Test.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+
+      <!-- ======================================================= -->
+      <!-- 2. JACOCO PLUGIN (Copertura automatica)                 -->
+      <!-- ======================================================= -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.8</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- ======================================================= -->
+      <!-- 3. PITEST PLUGIN (Analisi delle mutazioni)              -->
+      <!-- ======================================================= -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.15.0</version>
+        <configuration>
+          <targetClasses>${pit.targetClasses}</targetClasses>
+          <targetTests>${pit.targetTests}</targetTests>
+          <outputFormats>
+            <outputFormat>HTML</outputFormat>
+            <outputFormat>XML</outputFormat>
+          </outputFormats>
+          <timestampedReports>false</timestampedReports>
+        </configuration>
+      </plugin>
+
+      <!-- ======================================================= -->
+      <!-- ALTRI PLUGIN ORIGINALI DI TAJO                          -->
+      <!-- ======================================================= -->
+      <plugin>
+        <groupId>org.apache.tajo</groupId>
+        <artifactId>tajo-maven-plugins</artifactId>
         <executions>
           <execution>
             <id>version-info</id>
@@ -88,15 +149,17 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.7</source> <!-- for keeping tajo-client and tajo-jdbc available in 1.7-->
-          <target>1.7</target> <!-- for keeping tajo-client and tajo-jdbc available in 1.7-->
+          <source>1.7</source>
+          <target>1.7</target>
           <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
@@ -110,11 +173,16 @@
         </executions>
         <configuration>
           <excludes>
-          	<exclude>src/main/resources/META-INF/services/*</exclude>
+            <exclude>src/main/resources/META-INF/services/*</exclude>
             <exclude>src/test/resources/org/apache/tajo/conf/**</exclude>
+            <!-- test generati (Randoop, LLM): senza intestazione di licenza -->
+            <exclude>src/test/java/org/apache/tajo/util/RegressionTest*.java</exclude>
+            <exclude>src/test/java/org/apache/tajo/util/ErrorTest*.java</exclude>
+            <exclude>src/test/java/org/apache/tajo/util/BytesUtilsLLM*.java</exclude>
           </excludes>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -133,6 +201,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>com.github.os72</groupId>
         <artifactId>protoc-jar-maven-plugin</artifactId>
@@ -154,6 +223,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -172,10 +242,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
@@ -245,6 +311,34 @@
   </dependencies>
 
   <profiles>
+    <!-- ======================================================= -->
+    <!-- 4. PROFILO RANDOOP (Esegue SOLO i test automatici)      -->
+    <!-- ======================================================= -->
+    <profile>
+      <id>randoop</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.22.2</version>
+            <configuration>
+              <testFailureIgnore>${test.failure.ignore}</testFailureIgnore>
+              <excludes>
+                <exclude>**/BytesUtilsBBTest.java</exclude>
+                <exclude>**/BytesUtilsWBTest.java</exclude>
+                <exclude>**/BytesUtilsMTTest.java</exclude>
+                <exclude>**/BytesUtilsLLM*Test.java</exclude>
+              </excludes>
+              <includes>
+                <include>**/RegressionTest[0-9]*.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <profile>
       <id>docs</id>
       <activation>
@@ -257,7 +351,6 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <executions>
               <execution>
-                <!-- build javadoc jars per jar for publishing to maven -->
                 <id>module-javadocs</id>
                 <phase>package</phase>
                 <goals>
