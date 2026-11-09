@@ -32,8 +32,7 @@ jobs:
       - name: Build modules
         run: mvn -B -ntp -pl ${{ matrix.module }} -am install -DskipTests -Drat.skip=true
 
-      # "test" e non "verify": JaCoCo genera il report gia' nella fase test e RAT (licenze) non c'entra con i test.
-      # -Dtest.failure.ignore=false (richiede il pom v2): la CI diventa rossa se un test fallisce.
+        
       - name: Run Tests
         run: >
           mvn -B -ntp -pl ${{ matrix.module }} test
