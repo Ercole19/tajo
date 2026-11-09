@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: [ master ] 
+    branches: [ master ]
   pull_request:
   workflow_dispatch:
 
@@ -29,17 +29,16 @@ jobs:
           java-version: '8'
           cache: maven
 
-      
       - name: Build modules
         run: mvn -B -ntp -pl ${{ matrix.module }} -am install -DskipTests -Drat.skip=true
 
-      
+      # "test" e non "verify": JaCoCo genera il report gia' nella fase test e RAT (licenze) non c'entra con i test.
+      # -Dtest.failure.ignore=false (richiede il pom v2): la CI diventa rossa se un test fallisce.
       - name: Run Tests
         run: >
-          mvn -B -ntp -pl ${{ matrix.module }} verify
+          mvn -B -ntp -pl ${{ matrix.module }} test
           -Dtest='${{ matrix.tests }}' -DfailIfNoTests=false
-
-    
+          -Dtest.failure.ignore=false
 
       - name: Save Report
         if: always()
